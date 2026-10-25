@@ -1,0 +1,30 @@
+# 2026 races tracked from Wikipedia polling tables.
+# Page titles are resolved through the MediaWiki API (redirects followed);
+# a missing page is logged and skipped, never filled with invented data.
+cycle: 2026
+election_date: "2026-11-03"
+
+senate:
+  # Class 2 seats plus the two 2026 special elections (Class 3 seats).
+  regular: [AL, AK, AR, CO, DE, GA, ID, IL, IA, KS, KY, LA, ME, MA, MI, MN, MS,
+            MT, NE, NH, NJ, NM, NC, OK, OR, RI, SC, SD, TN, TX, VA, WV, WY]
+  special: [OH, FL]
+  page_regular: "2026 United States Senate election in {state_name}"
+  page_special: "2026 United States Senate special election in {state_name}"
+  # Seats NOT up in 2026 are derived from MEDSL 2022 + 2024 results
+  # (minus the Class 3 seats in OH and FL that are being contested in 2026).
+  # Independents are listed separately; caucus choice is a user setting.
+  independents_caucus:
+    ME: D   # Angus King (elected 2024) caucuses with Democrats
+    VT: D   # Bernie Sanders (elected 2024) caucuses with Democrats
+
+governor:
+  states: [AL, AK, AZ, AR, CA, CO, CT, FL, GA, HI, ID, IL, IA, KS, ME, MD, MA, MI,
+           MN, NE, NV, NH, NM, NY, OH, OK, OR, PA, RI, SC, SD, TN, TX, VT, WI, WY]
+  page: "{year} {state_name} gubernatorial election"
+
+house:
+  # Individual district polls are sparse; the House module uses the
+  # generic-ballot aggregator averages plus 2024 district results.
+  generic_ballot_page: "2026 United States House of Representatives elections"
+  generic_ballot_section_keyword: "Generic congressional ballot"

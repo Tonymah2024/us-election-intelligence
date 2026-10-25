@@ -1,0 +1,85 @@
+# US Election Intelligence — configuration template.
+# Copy to config/settings.yaml to customise. API keys are NEVER stored here:
+# they are read from environment variables (see .env.example).
+
+paths:
+  data_dir: data
+  database: data/election.db
+
+http:
+  user_agent: "us-election-intelligence/0.1 (nonpartisan research tool)"
+  timeout_seconds: 60
+  min_seconds_between_requests: 1.0   # polite rate limit per host
+  host_min_seconds:                   # stricter limits for specific hosts
+    en.wikipedia.org: 3.0
+  max_retries: 4                      # on HTTP 429/503, honouring Retry-After
+  cache_hours: 12                     # re-use raw downloads younger than this
+
+# Each source can be switched off. 'tos_note' is shown in the Data Quality page.
+sources:
+  medsl_president:
+    enabled: true
+    url: "https://dataverse.harvard.edu/api/access/datafile/13887042"
+    citation: "MIT Election Data and Science Lab, U.S. President 1976–2024, Harvard Dataverse, doi:10.7910/DVN/42MVDX"
+    tos_note: "CC0 public domain dataset."
+  medsl_senate:
+    enabled: true
+    url: "https://dataverse.harvard.edu/api/access/datafile/13887039"
+    citation: "MIT Election Data and Science Lab, U.S. Senate statewide 1976–2024, Harvard Dataverse, doi:10.7910/DVN/PEJ5QU"
+    tos_note: "CC0 public domain dataset."
+  medsl_house:
+    enabled: true
+    url: "https://dataverse.harvard.edu/api/access/datafile/13592823"
+    citation: "MIT Election Data and Science Lab, U.S. House 1976–2024, Harvard Dataverse, doi:10.7910/DVN/IG0UN2"
+    tos_note: "CC0 public domain dataset."
+  fte_raw_polls:
+    enabled: true
+    url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/pollster-ratings/raw_polls.csv"
+    citation: "FiveThirtyEight pollster-ratings raw_polls.csv (polls in final 21 days with certified results), github.com/fivethirtyeight/data"
+    tos_note: "CC BY 4.0. Historical only: FiveThirtyEight stopped publishing in March 2025."
+  fte_2024_pres_averages:
+    enabled: true
+    url: "https://raw.githubusercontent.com/fivethirtyeight/data/master/polls/2024-averages/presidential_general_averages_2024-09-12_uncorrected.csv"
+    citation: "FiveThirtyEight 2024 presidential general-election averages (snapshot 2024-09-12, uncorrected)"
+    tos_note: "CC BY 4.0. Snapshot ends 2024-09-12."
+  wikipedia_polls:
+    enabled: true
+    api: "https://en.wikipedia.org/w/api.php"
+    citation: "Wikipedia polling tables (CC BY-SA 4.0); each row cites the original pollster release."
+    tos_note: "Read through the MediaWiki API with a descriptive User-Agent and rate limiting. Rows are compiled by volunteers; verify against the cited pollster release."
+  fec_candidates:
+    enabled: true
+    api: "https://api.open.fec.gov/v1"
+    citation: "Federal Election Commission OpenFEC API"
+    tos_note: "Public API; key from FEC_API_KEY env var (DEMO_KEY fallback, low rate limit)."
+  census_cvap:
+    enabled: true
+    url: "https://www2.census.gov/programs-surveys/decennial/rdo/datasets/2024/2024-cvap/CVAP_2020-2024_ACS_csv_files.zip"
+    citation: "U.S. Census Bureau, Citizen Voting Age Population by Race and Ethnicity, 2020–2024 ACS 5-year special tabulation"
+    tos_note: "Public domain (U.S. federal government). ~59 MB zip, downloaded once and cached."
+  realclearpolling:
+    enabled: false
+    tos_note: "Not ingested: site blocks automated access (robots/403) and its terms restrict scraping. Use for manual cross-checks only."
+  fivethirtyeight_live:
+    enabled: false
+    tos_note: "Discontinued in March 2025 (URLs redirect to ABC News). Only the archived GitHub datasets are used."
+
+analysis:
+  moving_average_windows: [7, 14, 30]
+  recency_half_life_days: 14        # weight halves every N days
+  sample_size_cap: 1500             # sqrt(n) weight capped at this n
+  population_preference: ["LV", "RV", "A"]  # when one poll reports several
+  min_polls_for_bayes: 4
+
+simulation:
+  n_draws: 10000
+  seed: 2026
+  # Defaults are overwritten by historical error analysis when data exist.
+  default_national_error_sd: 3.0    # points, shared by all states
+  default_regional_error_sd: 1.5
+  default_state_error_sd: 3.5
+
+update:
+  # Manual by default. See config/schedule.example.yaml for optional scheduling.
+  mode: manual
+  keep_snapshots: 60

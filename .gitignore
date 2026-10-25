@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+config/settings.yaml
+.pytest_cache/
+# Raw download cache (re-created by scripts/update_data.py)
+data/raw/
+data/manual/
+data/*.log
+# The processed database, district tables, snapshots and research summaries ARE committed
+# so the deployed app works without re-downloading everything on start-up.

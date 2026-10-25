@@ -1,0 +1,47 @@
+# Optional scheduling (updates are MANUAL by default).
+# Pick ONE of the options below when deploying. Keep the frequency modest:
+# Wikipedia pages are fetched at most every 3 seconds and cached for 12 hours.
+
+# --- Option A: cron (Linux/macOS) -------------------------------------------
+# Runs at 07:15 and 19:15 local time. Edit with `crontab -e`.
+# 15 7,19 * * * cd /path/to/us-election-intelligence && .venv/bin/python scripts/update_data.py >> data/update.log 2>&1
+
+# --- Option B: macOS launchd ---------------------------------------------------
+# Save as ~/Library/LaunchAgents/org.uei.update.plist, then:
+#   launchctl load ~/Library/LaunchAgents/org.uei.update.plist
+launchd_plist: |
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+  <plist version="1.0"><dict>
+    <key>Label</key><string>org.uei.update</string>
+    <key>WorkingDirectory</key><string>/path/to/us-election-intelligence</string>
+    <key>ProgramArguments</key><array>
+      <string>/path/to/us-election-intelligence/.venv/bin/python</string>
+      <string>scripts/update_data.py</string></array>
+    <key>StartCalendarInterval</key><array>
+      <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>15</integer></dict>
+      <dict><key>Hour</key><integer>19</integer><key>Minute</key><integer>15</integer></dict></array>
+    <key>StandardOutPath</key><string>/path/to/us-election-intelligence/data/update.log</string>
+    <key>StandardErrorPath</key><string>/path/to/us-election-intelligence/data/update.log</string>
+  </dict></plist>
+
+# --- Option C: GitHub Actions (if the repo is hosted on GitHub) --------------
+# .github/workflows/update.yml — commits nothing by default; upload the summary as an artifact.
+github_actions: |
+  name: data-update
+  on:
+    schedule: [{cron: "15 12 * * *"}]
+    workflow_dispatch: {}
+  jobs:
+    update:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-python@v5
+          with: {python-version: "3.11"}
+        - run: pip install -r requirements.txt
+        - run: python scripts/update_data.py
+          env:
+            FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
+        - uses: actions/upload-artifact@v4
+          with: {name: research-summary, path: data/reports/}
