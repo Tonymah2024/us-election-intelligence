@@ -79,7 +79,11 @@ python scripts/update_data.py --only wikipedia
 
 Each run: checks sources → validates → detects new/revised/removed polls → stores →
 snapshots (`data/snapshots/`) → writes `data/reports/research_summary_<date>_runNNNN.md`.
-For scheduled runs see `config/schedule.example.yaml` (cron, launchd, GitHub Actions).
+**Automatic refresh:** `.github/workflows/data-update.yml` runs the update daily at 12:00 UTC on
+GitHub Actions, runs the tests, and commits the new data only if they pass; Streamlit Cloud then
+redeploys. Trigger an extra refresh from the repo's *Actions → Scheduled data update → Run workflow*.
+Optionally add an `FEC_API_KEY` repository secret. Other scheduling options (cron, launchd) are in
+`config/schedule.example.yaml`.
 
 ## Project layout
 
@@ -127,3 +131,8 @@ docs/METHODOLOGY.md
 * Keep `.env`, `config/settings.yaml` and `data/` out of version control (see `.gitignore`).
 
 See `docs/METHODOLOGY.md` for every formula and assumption.
+
+## Licence
+
+Code: [MIT](LICENSE). Data: see [DATA_SOURCES_AND_LICENSES.md](DATA_SOURCES_AND_LICENSES.md)
+(derived Wikipedia tables are CC BY-SA 4.0).

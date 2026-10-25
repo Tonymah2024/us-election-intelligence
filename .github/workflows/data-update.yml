@@ -1,0 +1,60 @@
+name: Scheduled data update
+
+# Refreshes polls and derived tables, runs the test suite, and commits the
+# updated data only if the tests pass. Streamlit Community Cloud redeploys
+# automatically on each push to main.
+on:
+  schedule:
+    - cron: "0 12 * * *"      # daily at 12:00 UTC (06:00 Mountain, 08:00 Eastern)
+  workflow_dispatch: {}       # "Run workflow" button for an extra refresh
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Large static downloads (MEDSL, 538 archive, 59 MB Census CVAP zip) are
+      # cached between runs so they are not re-downloaded every day.
+      - name: Restore raw download cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: raw-${{ github.run_id }}
+          restore-keys: raw-
+
+      - name: Update data (fresh Wikipedia pages)
+        env:
+          FEC_API_KEY: ${{ secrets.FEC_API_KEY }}
+        run: python scripts/update_data.py --force
+
+      - name: Run tests (unit + backtests; page smoke tests skipped for speed)
+        run: python -m pytest -q --ignore=tests/test_app_pages.py
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/election.db data/processed data/snapshots data/reports
+          if git diff --cached --quiet; then
+            echo "No data changes."
+          else
+            git commit -m "Automated data update $(date -u +%Y-%m-%d)"
+            git push
+          fi

@@ -60,7 +60,9 @@ def test_current_senate_composition_is_complete():
     s = pd.read_csv(p)
     assert len(s) == 100 and s["state"].value_counts().eq(2).all()
     assert (s["party"] == "O").sum() == 0
-    assert (s["next_election"] == 2026).sum() == 35     # 33 Class 2 + OH and FL specials
+    import datetime as dt
+    if dt.date.today() <= dt.date(2026, 11, 3):   # after election day the source lists winners' next terms
+        assert (s["next_election"] == 2026).sum() == 35     # 33 Class 2 + OH and FL specials
 
 
 def test_reports_build_pdf_excel_csv():
