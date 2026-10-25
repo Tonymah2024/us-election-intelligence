@@ -1,5 +1,7 @@
 # US Election Intelligence & Scenario Analysis
 
+**Live app:** https://us-election-intelligence.streamlit.app · data snapshot of 2026-10-25 (see *Updating* to refresh)
+
 A nonpartisan Streamlit application for studying US election polling, electoral
 geography and **conditional** scenarios: "if these assumptions held, what would the
 seat or electoral-vote arithmetic be?" It never forecasts a winner or reports a
