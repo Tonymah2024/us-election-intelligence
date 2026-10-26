@@ -13,6 +13,12 @@ a governorship. Each unit has a base margin (D - R, points) and a weight
                       + third_party_pts * (1 - 2f)              (f = share of 3rd-party vote taken from D)
                       + demographic_turnout_shift[state(u)]
                       + replacement_shift[u]                    (candidate withdrawal/replacement)
+                      + party_turnout_shift_u                   (relative turnout change of each party's voters)
+
+Party turnout: with base two-party shares p_D = (100 + m)/200 and p_R = 1 - p_D,
+raising Democratic voters' turnout by t_D and Republican voters' by t_R gives
+    m' = 100 (p_D (1 + t_D) - p_R (1 + t_R)) / (p_D (1 + t_D) + p_R (1 + t_R))
+and the component is m' - m (so the effect is largest where a party's share is largest).
 
 Every term is reported per unit so the arithmetic can be audited.
 
@@ -43,6 +49,7 @@ class Assumptions:
     replacement_shifts: dict = field(default_factory=dict)   # unit_id -> pts
     turnout_changes: dict = field(default_factory=dict)      # group -> relative change (0.05 = +5%)
     group_margins: dict = field(default_factory=dict)        # group -> assumed D-R margin in group (pts)
+    party_turnout: dict = field(default_factory=dict)        # "D"/"R" -> relative turnout change of that party's voters
     national_error_sd: float = 3.0
     regional_error_sd: float = 1.5
     state_error_sd: float = 3.5
@@ -70,7 +77,21 @@ class Assumptions:
         for k, v in self.turnout_changes.items():
             if v:
                 out.append(f"Turnout change, {k}: {v:+.0%} (group margin assumed {self.group_margins.get(k, 0):+.0f})")
+        for k, name in (("D", "Democratic"), ("R", "Republican")):
+            if self.party_turnout.get(k):
+                out.append(f"Turnout of {name} voters: {self.party_turnout[k]:+.0%} (relative)")
         return out
+
+
+def party_turnout_shift(base_margin, turnout: dict):
+    """Margin change (pts) when each party's voters change turnout by a relative amount."""
+    td, tr = float(turnout.get("D", 0.0) or 0.0), float(turnout.get("R", 0.0) or 0.0)
+    m = np.clip(np.asarray(base_margin, dtype=float), -100, 100)
+    if not td and not tr:
+        return np.zeros_like(m)
+    pd_, pr = (100 + m) / 200, (100 - m) / 200
+    d, r = pd_ * (1 + td), pr * (1 + tr)
+    return 100 * (d - r) / (d + r) - m
 
 
 def demographic_shift(demo: pd.DataFrame, turnout_changes: dict, group_margins: dict) -> pd.Series:
@@ -103,7 +124,9 @@ def apply(units: pd.DataFrame, a: Assumptions, demo: pd.DataFrame | None = None)
     ds = demographic_shift(demo, a.turnout_changes, a.group_margins)
     u["c_demographic"] = u["state"].map(ds).fillna(0.0) if len(ds) else 0.0
     u["c_replacement"] = u["unit_id"].map(a.replacement_shifts).fillna(0.0)
-    comps = ["c_national", "c_regional", "c_state", "c_undecided", "c_third_party", "c_demographic", "c_replacement"]
+    u["c_party_turnout"] = party_turnout_shift(u["base_margin"].values, a.party_turnout)
+    comps = ["c_national", "c_regional", "c_state", "c_undecided", "c_third_party", "c_demographic", "c_replacement",
+             "c_party_turnout"]
     u["scenario_margin"] = u["base_margin"] + u[comps].sum(axis=1)
     over = u["unit_id"].map(a.state_overrides)
     u.loc[over.notna(), "scenario_margin"] = over[over.notna()]

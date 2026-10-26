@@ -68,7 +68,7 @@ def build_tables(bundle: dict) -> dict[str, pd.DataFrame]:
     ] + [{"item": "Assumption", "value": s} for s in bundle["assumptions"]])
     cols = [c for c in ["unit_id", "label", "weight", "base_margin", "base_source", "c_national", "c_regional",
                         "c_state", "c_undecided", "c_third_party", "c_demographic", "c_replacement",
-                        "scenario_margin", "scenario_leader"] if c in bundle["units"]]
+                        "c_party_turnout", "scenario_margin", "scenario_leader"] if c in bundle["units"]]
     tables = {"Summary": summ, "Scenario_units": bundle["units"][cols].round(2),
               "Sensitivity": bundle["sensitivity"]}
     if bundle.get("sim"):
@@ -80,6 +80,12 @@ def build_tables(bundle: dict) -> dict[str, pd.DataFrame]:
         tables["Polling_averages"] = bundle["race_table"].round(2)
     if bundle.get("trends") is not None and len(bundle["trends"]):
         tables["Polling_trends"] = bundle["trends"].round(2)
+    if bundle.get("outcome"):
+        o = bundle["outcome"]
+        tables["Party_outcome"] = o["summary"]
+        if o.get("comparison") is not None and len(o["comparison"]):
+            tables["Scenario_comparison"] = o["comparison"].round(1)
+        tables["Executive_summary"] = pd.DataFrame({"paragraph": o["narrative"]})
     src, last = sources_table()
     tables["Sources"] = src
     tables["Last_update_log"] = last
@@ -98,6 +104,12 @@ METHOD_TEXT = [
     "demographic turnout shift + replacement shift (each term reported per unit).",
     "Monte Carlo: correlated normal errors (national + regional + state components); outputs percentile ranges.",
     "Electoral College: winner-take-all by state except Maine and Nebraska (2 at-large + 1 per district).",
+    "Party turnout: base two-party shares p_D = (100 + m)/200 and p_R = 1 − p_D are scaled by (1 + t_D) and "
+    "(1 + t_R); the new margin minus the old one is added to each unit.",
+    "Control: President 270 of 538 electors (otherwise a contingent election in the House by state delegation); "
+    "Senate 51 of 100, or 50 plus the vice president's tie-breaking vote, counted by caucus; House a majority of "
+    "seated members (218 of 435 with no vacancies). Net change compares the scenario with the stated pre-election "
+    "composition. Every control label is conditional on the stated assumptions.",
 ]
 
 
@@ -159,6 +171,36 @@ def to_pdf(tables: dict, bundle: dict) -> bytes:
 
     st = [Paragraph(bundle["title"], h1), Paragraph(DISCLAIMER, body), Spacer(1, 8),
           Paragraph("Executive summary", h2), tbl(tables["Summary"], [2.6 * inch, 4.6 * inch], fs=8)]
+    if "Party_outcome" in tables:
+        o = bundle["outcome"]
+        st += [Spacer(1, 8), Paragraph("Party outcome &amp; electoral control (hypothetical)", h2)]
+        st += [Paragraph(p.replace("&", "&amp;"), body) for p in o["narrative"]]
+        comp = o["comp"]
+        fig, ax = plt.subplots(figsize=(7, 1.3))
+        left = 0
+        plt.rcParams["hatch.color"] = (1, 1, 1, 0.35)
+        for k, c in (("D", "#2b6cb0"), ("I", "#6b46c1"), ("Tie", "#a0aec0"), ("R", "#c53030")):
+            v = comp.get(k, 0)
+            if v:
+                ax.barh([0], [v], left=left, color=c, hatch="//", edgecolor=c, linewidth=0)
+                ax.text(left + v / 2, 0, f"{k} {v:.0f}", ha="center", va="center", color="white", fontsize=10,
+                        fontweight="bold", bbox=dict(facecolor=c, edgecolor="none", pad=2))
+                left += v
+        if o.get("threshold"):
+            ax.axvline(o["threshold"], color="black", ls="--", lw=0.8)
+        ax.set_yticks([]); ax.set_xlim(0, max(left, 1)); ax.set_xlabel(o["unit_word"] + " under the selected scenario")
+        png = _chart_png(fig)
+        from PIL import Image as PILImage
+        w_px, h_px = PILImage.open(png).size
+        png.seek(0)
+        st += [Image(png, 7 * inch, 7 * inch * h_px / w_px),
+               KeepTogether([Paragraph("Outcome summary", h2), tbl(tables["Party_outcome"], [3.6 * inch, 3.6 * inch],
+                                                                   fs=7.5)])]
+        if "Scenario_comparison" in tables:
+            sc = tables["Scenario_comparison"]
+            keep = [c for c in ["scenario (hypothetical)", "Democratic", "Republican", "Independent / other",
+                                "Net D", "Net R", "Control status", "D spread 5th–95th"] if c in sc]
+            st += [KeepTogether([Paragraph("Scenario comparison (all hypothetical)", h2), tbl(sc[keep], fs=6.5)])]
     # Sensitivity chart
     sens = tables["Sensitivity"]
     fig, ax = plt.subplots(figsize=(7, 2.8))

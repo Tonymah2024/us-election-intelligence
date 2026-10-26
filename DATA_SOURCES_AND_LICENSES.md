@@ -14,3 +14,9 @@ are derived from the following sources. Redistribution follows each source's lic
 Individual poll rows cite the original pollster release (`pollster_url`) where Wikipedia provides one.
 Cook PVI values are reproduced as listed on Wikipedia and are © Cook Political Report.
 RealClearPolling data are not ingested.
+
+### Added for the Party outcome & electoral control page (2026-10-25)
+* Wikipedia, *List of current United States governors* — party of each sitting governor (CC BY-SA 4.0).
+* Wikipedia, *Party divisions of United States Congresses* — Senate and House seats by party at the start of
+  each Congress, 95th (1977) onward (CC BY-SA 4.0).
+* Wikipedia, *2012 United States presidential election in Maine / Nebraska* — district results (CC BY-SA 4.0).

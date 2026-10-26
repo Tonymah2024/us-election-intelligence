@@ -67,6 +67,15 @@ with tab2:
     persist("a_tp_from_d", c[2].slider("…drawn from the Democratic side", 0.0, 1.0,
                                        float(ss.get("a_tp_from_d", 0.5)), 0.05,
                                        help="0.5 = drawn equally from both sides (no margin change)."))
+    st.markdown("**Turnout of each party's voters**")
+    st.caption("Relative change in turnout among voters who would vote for each party (0.05 = 5% more of them vote). "
+               "Applied to each unit's base two-party split, so the effect is largest where that party is strongest. "
+               "Entirely your assumption.")
+    pc = st.columns(2)
+    persist("a_pt_D", pc[0].number_input("Democratic voters' turnout change", -0.3, 0.3, float(ss.get("a_pt_D", 0.0)),
+                                         0.01, format="%.2f"))
+    persist("a_pt_R", pc[1].number_input("Republican voters' turnout change", -0.3, 0.3, float(ss.get("a_pt_R", 0.0)),
+                                         0.01, format="%.2f"))
     st.markdown("**Candidate withdrawal or replacement**")
     st.caption("Enter the margin change you assume a replacement candidate would produce in that race. The app "
                "has no data on hypothetical candidates; the value is entirely your assumption.")
@@ -217,7 +226,8 @@ st.plotly_chart(sf, use_container_width=True)
 st.subheader("Arithmetic by unit")
 show = applied.copy()
 cols = ["unit_id", "label", "weight", "base_margin", "base_source", "c_national", "c_regional", "c_state",
-        "c_undecided", "c_third_party", "c_demographic", "c_replacement", "scenario_margin", "scenario_leader"]
+        "c_undecided", "c_third_party", "c_demographic", "c_replacement", "c_party_turnout", "scenario_margin",
+        "scenario_leader"]
 show = show[[c for c in cols if c in show]].sort_values("scenario_margin", key=lambda s: s.abs())
 st.dataframe(show.round(2), hide_index=True, use_container_width=True, height=420)
 download_df(show, f"scenario_units_{election.replace(' ', '_')}")

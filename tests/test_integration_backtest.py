@@ -74,7 +74,18 @@ def test_reports_build_pdf_excel_csv():
          "assumptions": a.describe(), "sensitivity": core.sensitivity(u, a), "sim": core.simulate(ap, a),
          "race_table": races.race_averages(races.main_matchups(
              db.read_sql("SELECT * FROM polls WHERE office='senate' AND cycle=2026"))), "trends": None}
+    from uei.scenarios import outcomes
+    comp = outcomes.scenario_composition(ap, m)
+    status = outcomes.status_for("senate", comp, "R")
+    pre = outcomes.current_senate()
+    b["outcome"] = {"summary": outcomes.summary_table("senate", comp, status, pre, "current Senate", 5),
+                    "comparison": outcomes.compare_scenarios(u, m, outcomes.preset_scenarios(a), pre, draws=500),
+                    "narrative": outcomes.narrative("senate", 2026, comp, status, pre, "current Senate",
+                                                    a.describe()),
+                    "comp": comp, "threshold": 51, "unit_word": "seats"}
     t = reports.build_tables(b)
+    assert {"Party_outcome", "Scenario_comparison", "Executive_summary"} <= set(t)
+    assert len(t["Scenario_comparison"]) == 9
     assert {"Summary", "Scenario_units", "Sensitivity", "Uncertainty", "Polling_averages", "Sources",
             "Methodology", "Limitations"} <= set(t)
     assert reports.to_pdf(t, b)[:4] == b"%PDF"

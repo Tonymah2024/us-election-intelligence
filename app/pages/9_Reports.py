@@ -3,8 +3,8 @@ import datetime as dt
 
 import streamlit as st
 
-from common import (core, header, load_demographics, load_polls, office_of, page_setup, require_data, scenario,
-                    sidebar_election)
+from common import (core, header, load_demographics, load_polls, office_of, outcome_context, outcomes, page_setup,
+                    require_data, scenario, sidebar_election)
 from uei.analysis.averages import moving_averages
 from uei.reporting import reports
 from uei.scenarios.races import main_matchups, race_averages
@@ -21,6 +21,7 @@ if units is None or len(units) == 0:
     st.error("No data for this election.")
     st.stop()
 include_sim = st.checkbox("Include Monte Carlo spread", True)
+include_outcome = st.checkbox("Include party outcome & control summary and scenario comparison", True)
 title = st.text_input("Report title", f"{election} — conditional scenario report ({dt.date.today().isoformat()})")
 
 race_table, trends = None, None
@@ -42,6 +43,15 @@ bundle = {"title": title, "office": office, "year": meta.get("year"), "units": a
           "sensitivity": core.sensitivity(units, a, load_demographics()),
           "sim": core.simulate(applied, a) if include_sim else None,
           "race_table": race_table, "trends": trends}
+if include_outcome:
+    ctx = outcome_context(election)
+    with st.spinner("Calculating comparison scenarios…"):
+        cmp = outcomes.compare_scenarios(units, ctx["meta"], outcomes.preset_scenarios(a, st.session_state.get(
+            "preset_params")), ctx["pre"], load_demographics(), ctx["vp_party"], ctx["competitive_margin"])
+    bundle["outcome"] = {"summary": outcomes.summary_table(office, ctx["comp"], ctx["status"], ctx["pre"],
+                                                           ctx["pre_label"], ctx["competitive_margin"]),
+                         "comparison": cmp, "narrative": ctx["narrative"], "comp": ctx["comp"],
+                         "threshold": ctx["status"].get("threshold"), "unit_word": outcomes.UNIT_WORD[office]}
 tables = reports.build_tables(bundle)
 st.dataframe(tables["Summary"], hide_index=True, use_container_width=True)
 
@@ -54,7 +64,7 @@ c[1].download_button("⬇ Excel workbook", reports.to_excel(tables), file_name=f
                      mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
 c[2].download_button("⬇ CSV tables (zip)", reports.to_csv_zip(tables), file_name=f"{stem}_csv.zip",
                      mime="application/zip", use_container_width=True)
-st.caption("Contents: executive summary, polling averages and trends (2026 races), conditional scenario "
+st.caption("Contents: executive summary, party outcome & control summary, scenario comparison, polling averages and trends (2026 races), conditional scenario "
            "arithmetic per unit, seat/EV totals, sensitivity analysis, Monte Carlo spread, methodology, data "
            "limitations, and sources with retrieval dates.")
 with st.expander("Sheets included"):

@@ -438,3 +438,68 @@ def extract_current_senators(page: dict) -> pd.DataFrame:
                          "source_url": page["url"], "source_revision": page["revid"]})
         return pd.DataFrame(rows)
     return pd.DataFrame()
+
+
+def _party_code(name: str) -> str:
+    name = clean(name)
+    return ("D" if name.startswith("Democratic") else "R" if name.startswith("Republican")
+            else "I" if name.startswith("Independent") else "O")
+
+
+def extract_current_governors(page: dict) -> pd.DataFrame:
+    """'List of current United States governors': state, governor, party, term end (50 states)."""
+    from ..reference import NAME_TO_ABBR
+    for df, ctx, _, _ in iter_tables(page["html"]):
+        cols = _flatten_columns(df)
+        if not ("State" in cols and "Governor" in cols) or len(df) < 45:
+            continue
+        df.columns = cols
+        party_col = "Party.1" if "Party.1" in cols else "Party"
+        rows = []
+        for _, r in df.iterrows():
+            name = re.sub(r"\s*\(list\)\s*$", "", clean(r["State"]))
+            st = NAME_TO_ABBR.get(name.upper())
+            if not st:
+                continue
+            party = clean(r[party_col])
+            rows.append({"state": st, "governor": clean(r["Governor"]), "party_name": party,
+                         "party": _party_code(party), "term_end": clean(r.get("Term end", "")),
+                         "source_url": page["url"], "source_revision": page["revid"]})
+        return pd.DataFrame(rows)
+    return pd.DataFrame()
+
+
+def _first_int(text) -> int | None:
+    """'53/52' or '56–58[63]' -> first value listed (composition at the start of the Congress)."""
+    m = re.match(r"\s*(\d+)", REF_RE.sub("", str(text)))
+    return int(m.group(1)) if m else (0 if clean(text) in ("—", "-", "") else None)
+
+
+def extract_party_divisions(page: dict, first_congress: int = 95) -> pd.DataFrame:
+    """'Party divisions of United States Congresses': Senate and House seats by party at the start
+    of each Congress from `first_congress` (95th = 1977) onward. Where Wikipedia lists several values
+    (changes during a Congress) the first one is kept."""
+    for df, ctx, _, _ in iter_tables(page["html"]):
+        if len(df) < 500:
+            continue
+        # Header cells span columns irregularly, so read by position:
+        # Congress, Years, Senate total/D/R/others/vacancies, House total/D/R/others/vacancies.
+        # (In the modern part of the table the 'Anti-Admin' / 'Pro-Admin' columns hold Democrats / Republicans.)
+        rows = []
+        for vals in df.itertuples(index=False):
+            vals = list(vals)
+            m = re.match(r"(\d+)(st|nd|rd|th)$", clean(vals[0]))
+            if not m or int(m.group(1)) < first_congress:
+                continue
+            years = clean(vals[1])
+            y0 = re.match(r"(\d{4})", years)
+            for ch, off in (("senate", 2), ("house", 7)):
+                total, d, r, o, v = (_first_int(x) for x in vals[off:off + 5])
+                if total is None or d is None or r is None or d + r > total:
+                    raise ValueError(f"unexpected party-division row for Congress {m.group(1)} ({ch})")
+                rows.append({"congress": int(m.group(1)), "years": years,
+                             "start_year": int(y0.group(1)) if y0 else None, "chamber": ch, "total": total,
+                             "D": d, "R": r, "other": o or 0, "vacant": v or 0,
+                             "source_url": page["url"], "source_revision": page["revid"]})
+        return pd.DataFrame(rows)
+    return pd.DataFrame()

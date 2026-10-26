@@ -6,6 +6,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT / "app"))   # pages import app/common.py, as under `streamlit run`
 
 
 def make_polls(rows):

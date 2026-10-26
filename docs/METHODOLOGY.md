@@ -137,3 +137,44 @@ consistent with noise.
 * 65 Senate seats are not on the 2026 ballot; 35 are (33 Class 2 + OH, FL specials).
 * Archived final presidential polls overstated Democratic margins in 2016 and 2020
   (negative mean error), matching the published post-election reviews.
+
+
+## Party outcome & electoral control
+
+All figures on this page are bookkeeping on top of the scenario engine; none is a forecast.
+
+**Totals.** Units won under the scenario plus seats not on the ballot: Senate holdovers from the current-senators
+list (by party and by caucus), governors not up in 2026 at their current party. Units with a margin of exactly
+zero are *unresolved*. Independents are counted separately from both parties.
+
+**Control rules.**
+* President: 270 of 538 electors. With no majority (269–269, or electors won by others / unresolved) the House
+  chooses among the top three with one vote per state delegation (26 needed) and the Senate chooses the vice
+  president. ME and NE give 2 electors to the statewide leader and 1 to each district leader.
+* Senate: 51 of 100, counted by caucus. Sitting independents count with the caucus in `config/races_2026.yaml`;
+  an independent who leads a 2026 race has no assumed caucus. At 50–50 the vice president's party
+  (`vice_president_party` in the same file) has control through the tie-breaking vote.
+* House: majority of members seated, `floor((435 − vacancies) / 2) + 1` (218 with every seat filled).
+* Governors: no threshold.
+
+**Net change** = scenario total − pre-election composition: the certified previous presidential result (pledged
+electors), the current Senate, the current holders of the 2026 House districts (vacant and new seats count for
+neither party), or the current governors of the same states.
+
+**Competitive** = |scenario margin| < the threshold set in the sidebar (default 5 pts).
+
+**Pivotal units.** For the 15 closest units, the unit's margin is reversed with everything else fixed; a unit is
+pivotal if that alone changes the control status.
+
+**Party turnout.** With base two-party shares p_D = (100 + m)/200, p_R = 1 − p_D, turnout changes t_D, t_R give
+m' = 100 (p_D(1+t_D) − p_R(1+t_R)) / (p_D(1+t_D) + p_R(1+t_R)); the component m' − m is added to each unit.
+
+**Preset comparison scenarios** (all start from the stored baseline margins and the simulator's error SDs):
+baseline; ±2 pt uniform polling shift; +5% turnout of Democratic / Republican voters (party-turnout formula);
+independents (assumed 30% of voters) swinging 10 pts toward each party, i.e. ±3 pts overall; polling-error SDs
+× 1.5 (totals unchanged, wider 5th–95th spread); and the simulator's custom settings. All parameters are
+editable on the page.
+
+**History.** Electoral votes 2012–2024 are recomputed from certified state and district results (pledged
+electors; faithless electors not reflected). Chamber composition is the first value Wikipedia lists for the start
+of each Congress since 1977.

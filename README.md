@@ -41,7 +41,7 @@ Keys are **only** read from environment variables or `.env` (never stored in cod
 | MEDSL House results | ⚠️ needs a Dataverse guestbook form | optional: put the file at `data/manual/1976-2024-house.tab` |
 | FiveThirtyEight GitHub archive (CC BY 4.0) | ✅ | 18,109 final-21-day polls with results (1998–2022); 2020 and 2024 presidential averages (2024 snapshot ends 2024-09-12) |
 | FiveThirtyEight live polls | ❌ discontinued March 2025 | not used |
-| Wikipedia polling tables (CC BY-SA 4.0) via MediaWiki API | ✅ | 2026 Senate and governor polls (each row links to the cited pollster release where available), generic-ballot aggregator averages, 2026 House districts with PVI, current senators, ME/NE district results |
+| Wikipedia polling tables (CC BY-SA 4.0) via MediaWiki API | ✅ | 2026 Senate and governor polls (each row links to the cited pollster release where available), generic-ballot aggregator averages, 2026 House districts with PVI and incumbents, current senators, current governors, party divisions of each Congress since 1977, ME/NE district results 2012–2024 |
 | OpenFEC API | ✅ (DEMO_KEY) | 2026 Senate candidate lists |
 | Census CVAP 2020–2024 (public domain) | ✅ | electorate composition by state for turnout scenarios |
 | RealClearPolling | ❌ automated access blocked; terms restrict scraping | not ingested (aggregator values quoted on Wikipedia are shown as aggregator rows) |
@@ -57,12 +57,13 @@ retry/back-off on HTTP 429 and cached for 12 h.
 | **Overview** | polls stored, calendar, race averages with 90% intervals, 14-day shifts tested against noise, generic ballot |
 | **Polling trends** | individual polls (marker size ∝ √n, shape = LV/RV/A, outline = partisan sponsor), 7/14/30-day averages, LOWESS, Bayesian average with credible band, LV-vs-RV effect, house effects, race comparison |
 | **Electoral map** | base or scenario margins by state, EV allocation with ME/NE districts, tipping-point unit; House aggregated by state |
-| **Scenario simulator** | national/regional/state shifts, undecided split, third-party support, candidate replacement, turnout by group, polling-error SDs and correlation, overrides → totals, Monte Carlo spread, sensitivity, break-even shift, per-unit arithmetic |
+| **Scenario simulator** | national/regional/state shifts, undecided split, third-party support, candidate replacement, turnout by group and by party, polling-error SDs and correlation, overrides → totals, Monte Carlo spread, sensitivity, break-even shift, per-unit arithmetic |
+| **Party outcome & electoral control** | seats / electoral votes by party under the current scenario, control threshold and status (270 EV; Senate 51 or 50 + VP, by caucus; House majority of seated members), net change vs the pre-election composition, competitive units, Senate/House/ME-NE detail, closest and pivotal units, nine preset hypothetical comparison scenarios, historical EV and chamber composition, plain-English summary, saved scenarios |
 | **Uncertainty** | sampling vs dispersion vs historical error, interval chart, error by cycle, scenario sensitivity table |
 | **Historical comparison** | final polls vs results (538 archive), 538 presidential averages vs results, 2026 averages vs prior results |
 | **Data quality** | sources and terms, completeness by field, pollster profile, poll explorer with links, archive coverage, validation rejections |
 | **What changed** | snapshot comparison: new/removed polls, old vs new averages, z-test, composition effect, affected scenario totals, interpretations |
-| **Reports** | PDF, Excel and CSV (zip) for the current scenario |
+| **Reports** | PDF, Excel and CSV (zip) for the current scenario, including the party-outcome summary and scenario comparison |
 
 Badges on each page show which kind of number you are looking at: poll observation,
 modelled estimate, conditional scenario, or certified result.

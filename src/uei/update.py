@@ -147,6 +147,23 @@ def _store_wikipedia(run: Run):
     except Exception as e:
         run.record("wikipedia_current_senators", "error", 0, str(e))
 
+    for title, fn, fname, check, source in (
+            ("List of current United States governors", wikipedia.extract_current_governors,
+             "current_governors.csv", lambda d: len(d) == 50, "wikipedia_current_governors"),
+            ("Party divisions of United States Congresses", wikipedia.extract_party_divisions,
+             "congress_party_divisions.csv", lambda d: len(d) >= 40 and d["D"].notna().all(),
+             "wikipedia_party_divisions")):
+        try:
+            page = wikipedia.get_page(title, max_age_hours=max_age if max_age == 0 else 24)
+            d = fn(page)
+            if check(d):
+                d.to_csv(config.data_dir() / "processed" / fname, index=False)
+                run.record(source, "ok", len(d), page["url"])
+            else:
+                run.record(source, "error", len(d), "unexpected table shape; previous file kept")
+        except Exception as e:
+            run.record(source, "error", 0, str(e))
+
     polls = pd.concat(all_polls, ignore_index=True) if all_polls else pd.DataFrame()
     valid, rejected = validate_polls(polls)
     if len(rejected):
@@ -188,7 +205,7 @@ def _store_districts(run: Run):
     if not run.want("wikipedia_polls"):
         return
     rows = []
-    for year in (2016, 2020, 2024):
+    for year in (2012, 2016, 2020, 2024):
         for st in ("ME", "NE"):
             try:
                 page = wikipedia.get_page(f"{year} United States presidential election in {STATES[st][0]}",

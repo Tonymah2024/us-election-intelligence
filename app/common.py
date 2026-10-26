@@ -181,12 +181,29 @@ def get_assumptions(office: str) -> Assumptions:
         replacement_shifts=ss.get("a_replace", {}),
         turnout_changes=ss.get("a_turnout", {}),
         group_margins=ss.get("a_group_margins", {}),
+        party_turnout={k: ss.get(f"a_pt_{k}", 0.0) for k in ("D", "R") if ss.get(f"a_pt_{k}", 0.0)},
         national_error_sd=ss.get("a_nat_sd", nat),
         regional_error_sd=ss.get("a_reg_sd", reg),
         state_error_sd=ss.get("a_state_sd", sta),
         n_draws=int(ss.get("a_draws", config.settings()["simulation"]["n_draws"])),
         seed=int(config.settings()["simulation"]["seed"]),
     )
+
+
+def load_assumptions_into_session(a: Assumptions):
+    """Make a saved scenario the Scenario simulator's current assumptions."""
+    ss = st.session_state
+    ss["a_nat"] = a.national_shift
+    for r in REGIONS:
+        ss[f"a_reg_{r}"] = float(a.regional_shifts.get(r, 0.0))
+        ss[f"w_reg_{r}"] = float(a.regional_shifts.get(r, 0.0))
+    ss["a_state_shifts"], ss["a_overrides"], ss["a_replace"] = dict(a.state_shifts), dict(a.state_overrides), dict(a.replacement_shifts)
+    ss["a_und"], ss["a_tp"], ss["a_tp_from_d"] = a.undecided_dem_share, a.third_party_pts, a.third_party_from_dem
+    ss["a_turnout"], ss["a_group_margins"] = dict(a.turnout_changes), dict(a.group_margins)
+    for k in ("D", "R"):
+        ss[f"a_pt_{k}"] = float(a.party_turnout.get(k, 0.0))
+    ss["a_nat_sd"], ss["a_reg_sd"], ss["a_state_sd"] = a.national_error_sd, a.regional_error_sd, a.state_error_sd
+    ss["a_draws"] = int(a.n_draws)
 
 
 def scenario(election: str):
@@ -212,3 +229,89 @@ def download_df(df: pd.DataFrame, name: str, label: str = "Download CSV"):
 def state_name(s: str) -> str:
     base = s.split("-")[0]
     return STATES.get(base, (s,))[0]
+
+
+# --------------------------------------------------------------------------- party outcome & control
+from uei.scenarios import outcomes  # noqa: E402
+
+
+def competitive_margin() -> float:
+    return float(st.session_state.get("competitive_margin",
+                                      config.settings().get("analysis", {}).get("competitive_margin", 5.0)))
+
+
+def vp_party() -> str | None:
+    return config.races_2026()["senate"].get("vice_president_party")
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def _pre_president(year: int):
+    prev = 2024 if year == 2028 else year - 4
+    comp, notes = outcomes.certified_electoral_votes(prev)
+    return comp, f"the certified {prev} result (pledged electoral votes)", notes
+
+
+def pre_election(office: str, year: int, units: pd.DataFrame) -> tuple[dict | None, str, list[str]]:
+    """Observed pre-election composition used for net change, with a label and notes."""
+    if office == "president":
+        return _pre_president(year)
+    if office == "senate":
+        s = outcomes.current_senate()
+        return (s, s["label"], []) if s else (None, "", ["current Senate composition not loaded"])
+    if office == "house":
+        h = outcomes.current_house()
+        if not h:
+            return None, "", ["current House holders not loaded"]
+        return h, h["label"], [f"{h['vacant']} district(s) currently vacant and {h['new_seats']} new seat(s) with no "
+                               "incumbent; net change counts them as held by neither party"]
+    g = outcomes.current_governors(list(units["state"]) if len(units) else [])
+    return (g, g["label"], []) if g else (None, "", ["current governors not loaded"])
+
+
+def outcome_context(election: str) -> dict | None:
+    """Everything the Party Outcome page and the reports need for the current scenario."""
+    units, meta, a, applied = scenario(election)
+    if units is None or len(units) == 0:
+        return None
+    office = office_of(election)
+    meta = dict(meta)
+    year = int(meta.get("year") or 2026)
+    missing = []
+    if office == "governor":
+        # Governors not on the 2026 ballot keep their current party; unpolled 2026 races are not modelled.
+        g = outcomes.current_governors()
+        if g:
+            hold = g["table"][~g["table"]["state"].isin(config.races_2026()["governor"]["states"])]
+            meta["fixed"] = hold["party"].replace({"O": "I"}).value_counts().to_dict()
+        if meta.get("unpolled"):
+            missing.append(f"{len(meta['unpolled'])} governor races have no 2026 polls and are not modelled "
+                           f"({', '.join(meta['unpolled'])})")
+    cm = competitive_margin()
+    comp = outcomes.scenario_composition(applied, meta, cm)
+    vp = vp_party() if office == "senate" else None
+    status = outcomes.status_for(office, comp, vp)
+    pre, pre_label, notes = pre_election(office, year, units)
+    if office == "governor" and pre:
+        # Compare like with like: current governors of the states in the calculation.
+        inc = set(units["state"]) | set(g["table"]["state"]) - set(config.races_2026()["governor"]["states"])
+        pre = outcomes.current_governors(sorted(inc))
+        pre_label = "current governors of the same states (unpolled 2026 races excluded)"
+    missing += notes
+    fb = applied[applied["base_source"].astype(str).str.contains("no 2026 polls|lacks party|2 × 2026 Cook PVI|"
+                                                                 r"\(no polls\)")]
+    if len(fb):
+        what = "use 2 × Cook PVI as district lean" if office == "house" else "have no 2026 polls (prior result used)"
+        missing.append(f"{len(fb)} unit(s) {what}")
+    if meta.get("missing_units"):
+        missing.append(f"no baseline for {', '.join(meta['missing_units'])}")
+    if meta.get("districts_missing"):
+        missing.append(f"{meta['districts_missing']} House districts missing from the district list")
+    baseline = core.apply(units, Assumptions(), load_demographics())
+    piv = outcomes.pivotal_units(applied, meta, vp, top=15)
+    return {"office": office, "year": year, "election": election, "units": units, "meta": meta, "a": a,
+            "applied": applied, "comp": comp, "status": status, "pre": pre, "pre_label": pre_label,
+            "net": outcomes.net_change(comp, pre) if pre else None, "pivotal": piv,
+            "changed": outcomes.changed_units(applied, baseline), "baseline_applied": baseline,
+            "missing": missing, "vp_party": vp, "competitive_margin": cm,
+            "narrative": outcomes.narrative(office, year, comp, status, pre, pre_label, a.describe(), piv,
+                                            missing, cm)}
