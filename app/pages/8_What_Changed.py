@@ -20,13 +20,17 @@ if len(snaps) < 2:
     st.info("At least two update snapshots are needed. Run `python scripts/update_data.py` again later to "
             "compare. Until then, the change log below lists what the first runs added.")
 runs = db.read_sql("SELECT run_id, started_at, finished_at, status FROM update_runs ORDER BY run_id DESC")
-st.dataframe(runs, hide_index=True, use_container_width=True)
+st.dataframe(runs, hide_index=True, width="stretch")
 
 if len(snaps) >= 2:
     names = [p.name for p in snaps]
     c = st.columns(2)
     old_n = c[0].selectbox("Previous snapshot", names, index=len(names) - 2)
     new_n = c[1].selectbox("New snapshot", names, index=len(names) - 1)
+    if old_n == new_n:
+        st.info("Pick two different snapshots to compare.")
+    elif old_n > new_n:
+        st.caption("The 'previous' snapshot is newer than the 'new' one, so changes are shown in reverse.")
     old = pd.read_csv(snap_dir / old_n / "polls.csv")
     new = pd.read_csv(snap_dir / new_n / "polls.csv")
     ok, nk = set(old["poll_key"]), set(new["poll_key"])
@@ -47,7 +51,7 @@ if len(snaps) >= 2:
     if rows:
         t = pd.DataFrame(rows)
         st.markdown("**2–4 · Previous vs new figures, difference and statistical test**")
-        st.dataframe(t.round(2), hide_index=True, use_container_width=True)
+        st.dataframe(t.round(2), hide_index=True, width="stretch")
         download_df(t, "race_changes")
         st.markdown("**5 · Affected scenario calculations** (baseline assumptions)")
         for office in ("senate", "governor"):
@@ -69,14 +73,14 @@ if len(snaps) >= 2:
         st.markdown("- The averages overlap in most of their polls, so the reported SE of the difference is "
                     "conservative (the true SE is smaller); conversely, non-sampling error is not included.")
         if ex["new_polls"]:
-            st.dataframe(pd.DataFrame(ex["new_polls"]), hide_index=True, use_container_width=True)
+            st.dataframe(pd.DataFrame(ex["new_polls"]), hide_index=True, width="stretch")
     else:
         st.success("No race averages changed between these snapshots.")
 
 st.subheader("Change log")
 ch = db.read_sql("SELECT * FROM poll_changes ORDER BY run_id DESC LIMIT 2000")
 if len(ch):
-    st.dataframe(ch, hide_index=True, use_container_width=True, height=360)
+    st.dataframe(ch, hide_index=True, width="stretch", height=360)
     download_df(ch, "poll_change_log")
 reps = sorted((config.data_dir() / "reports").glob("research_summary_*.md"))
 if reps:

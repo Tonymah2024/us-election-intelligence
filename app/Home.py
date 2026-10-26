@@ -13,6 +13,7 @@ from uei.scenarios.races import main_matchups
 page_setup("Overview")
 require_data()
 sidebar_election()
+st.sidebar.info("This Overview always shows the 2026 races. The election chosen above applies to the other pages.")
 header("US Election Intelligence — Overview", ["observation", "result"],
        "Nonpartisan research tool. Poll observations and certified results are shown separately from modelled "
        "estimates and conditional scenarios. Nothing in this app forecasts a winner or assigns win probabilities.")
@@ -77,13 +78,13 @@ else:
                       xaxis_title="Polling average margin (non-Republican − Republican, pts)",
                       yaxis=dict(autorange="reversed"))
     l, r = st.columns([3, 2])
-    l.plotly_chart(fig, use_container_width=True)
+    l.plotly_chart(fig, width="stretch")
     show = tab.copy()
     for col in ("average", "lo90", "hi90"):
         show[col] = [fmt_margin(v, party=p) for v, p in zip(show[col], show["party"])]
     show["14-day change"] = show["14-day change"].map(lambda v: f"{v:+.1f}" if v is not None and pd.notna(v) else "—")
     r.dataframe(show[["race", "average", "polls", "14-day change", "change meaningful (90%)"]],
-                hide_index=True, use_container_width=True, height=max(380, 24 * len(tab)))
+                hide_index=True, width="stretch", height=max(380, 24 * len(tab)))
 
 st.subheader("Major shifts in the last 14 days")
 if len(tab) and tab["14-day change"].notna().any():
@@ -105,7 +106,7 @@ if len(gb):
     last = gb.sort_values("updated").groupby("aggregator").tail(1)
     st.dataframe(last[["aggregator", "period", "updated", "pct_dem", "pct_rep", "margin"]]
                  .rename(columns={"pct_dem": "Democrats %", "pct_rep": "Republicans %", "margin": "margin (D − R)"}),
-                 hide_index=True, use_container_width=True)
+                 hide_index=True, width="stretch")
     st.caption("These are published averages by third-party aggregators (as listed on Wikipedia), not "
                "individual polls. Source and revision are recorded on the Data quality page.")
 else:

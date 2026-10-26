@@ -29,7 +29,7 @@ if office == "house":
             g = g.sort_values("updated")
             fig.add_trace(go.Scatter(x=g["updated"], y=g["margin"], mode="lines+markers", name=agg))
         fig.update_layout(height=380, yaxis_title="Margin (D − R)", margin=dict(t=10))
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
         download_df(gb, "generic_ballot_aggregators")
     hist = load_polls(office="generic_ballot", source="fte_raw_polls")
     if len(hist):
@@ -37,11 +37,13 @@ if office == "house":
         s = hist.groupby("cycle").agg(polls=("margin", "size"), poll_avg=("margin", "mean"),
                                       result=("actual_margin", "first")).reset_index()
         s["error (result − polls)"] = s["result"] - s["poll_avg"]
-        st.dataframe(s.round(2), hide_index=True, use_container_width=True)
+        st.dataframe(s.round(2), hide_index=True, width="stretch")
     st.stop()
 
 year = 2026 if "2026" in election else int(election.split()[1]) if "2028" not in election else 2024
 src = "wikipedia" if year == 2026 else None
+if "2028" in election:
+    st.info("There is no 2028 polling yet. This page shows the 2024 presidential polls used as the 2028 baseline.")
 polls = load_polls(office=office, cycle=year, source=src)
 if office == "president" and year in (2020, 2024):
     agg = load_aggregators("president", year)
@@ -134,7 +136,7 @@ if len(agg) and sel in set(agg["race_id"]):
 fig.add_hline(y=0, line_dash="dot", line_color="grey")
 fig.update_layout(height=470, yaxis_title="Margin (D − R, pts)", margin=dict(t=10),
                   legend=dict(orientation="h", y=-0.15))
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 st.caption("Marker size ∝ √n; shape: ● LV ■ RV ◆ adults; black outline = partisan sponsor. "
            "The credible band is for the polling average, not the result.")
 
@@ -166,14 +168,14 @@ if len(gp):
     if len(he):
         hs = he.copy()
         hs["house_effect"] = hs["house_effect"].round(2)
-        st.dataframe(hs.round(2), hide_index=True, use_container_width=True)
+        st.dataframe(hs.round(2), hide_index=True, width="stretch")
         download_df(hs, f"house_effects_{year}_{office}")
 
     st.subheader("Polls in this view")
     cols = ["pollster", "sponsor_partisan", "start_date", "end_date", "sample_size", "population", "moe",
             "pct_dem", "pct_rep", "pct_undecided", "margin", "pollster_url", "source_url"]
     st.dataframe(gp[[c for c in cols if c in gp]].sort_values("end_date", ascending=False),
-                 hide_index=True, use_container_width=True,
+                 hide_index=True, width="stretch",
                  column_config={"pollster_url": st.column_config.LinkColumn("pollster release"),
                                 "source_url": st.column_config.LinkColumn("compiled at")})
     download_df(gp, f"polls_{sel}")
@@ -191,4 +193,4 @@ if multi:
             fig2.add_trace(go.Scatter(x=ma["date"], y=ma["wma30"], name=labels[rid]))
     fig2.add_hline(y=0, line_dash="dot", line_color="grey")
     fig2.update_layout(height=380, yaxis_title="30-day weighted average (D − R)", margin=dict(t=10))
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width="stretch")

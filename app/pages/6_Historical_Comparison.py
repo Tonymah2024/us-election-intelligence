@@ -30,8 +30,8 @@ with tab1:
         f.add_trace(go.Scatter(x=[-lim, lim], y=[-lim, lim], mode="lines", line=dict(dash="dot", color="grey"),
                                name="polls = result"))
         f.update_layout(height=520, margin=dict(t=10))
-        st.plotly_chart(f, use_container_width=True)
-        st.dataframe(summ[summ["office"] == office].round(2), hide_index=True, use_container_width=True)
+        st.plotly_chart(f, width="stretch")
+        st.dataframe(summ[summ["office"] == office].round(2), hide_index=True, width="stretch")
         download_df(x, f"historical_errors_{office}")
         st.caption("Source: FiveThirtyEight pollster-ratings archive (polls in the final 21 days of each race, "
                    "with certified results). Points above the dotted line: Democrats beat their polls.")
@@ -53,7 +53,7 @@ with tab2:
         f.add_trace(go.Scatter(x=[-40, 40], y=[-40, 40], mode="lines", line=dict(dash="dot"), name="equal"))
         f.update_traces(textposition="top center", selector=dict(mode="markers+text"))
         f.update_layout(height=520, margin=dict(t=10))
-        st.plotly_chart(f, use_container_width=True)
+        st.plotly_chart(f, width="stretch")
         c = st.columns(3)
         c[0].metric("Mean error (result − average)", f"{m['error'].mean():+.1f}")
         c[1].metric("RMSE", f"{np.sqrt((m['error']**2).mean()):.1f}")
@@ -84,10 +84,10 @@ with tab3:
                    color=m.sort_values("2026 avg vs 2024 presidential")["2026 avg vs 2024 presidential"] > 0,
                    color_discrete_map={True: D_COLOR, False: R_COLOR}, labels={"color": "toward D"})
         f.update_layout(height=380, margin=dict(t=10), showlegend=False)
-        st.plotly_chart(f, use_container_width=True)
+        st.plotly_chart(f, width="stretch")
         keep = [c for c in ["race_id", "matchup", "n_polls", "mean", "2024 presidential", "previous seat result",
                             "2026 avg vs 2024 presidential"] if c in m]
-        st.dataframe(m[keep].round(2), hide_index=True, use_container_width=True)
+        st.dataframe(m[keep].round(2), hide_index=True, width="stretch")
         download_df(m[keep], f"{office}_2026_vs_previous")
         hist_mid = summ[summ["office"] == office]
         if len(hist_mid):

@@ -6,7 +6,7 @@ import streamlit as st
 
 from common import (D_COLOR, I_COLOR, R_COLOR, REGIONS, build_units, core, default_error_sds, download_df,
                     fixed_seats, fmt_margin, header, load_demographics, office_of, page_setup, require_data,
-                    scenario, sidebar_election)
+                    reset_assumptions, scenario, sidebar_election)
 
 page_setup("Scenario simulator")
 require_data()
@@ -29,12 +29,16 @@ def persist(key, value):
     return value
 
 
+def _clear(store_key: str, widget_prefix: str):
+    """Callback: empty one assumption dict and reset the widgets that edit it."""
+    ss[store_key] = {}
+    for k in [k for k in ss.keys() if str(k).startswith(widget_prefix)]:
+        del ss[k]
+
+
 with st.sidebar:
     st.markdown("### Assumptions")
-    if st.button("Reset all assumptions"):
-        for k in [k for k in ss.keys() if k.startswith("a_")]:
-            del ss[k]
-        st.rerun()
+    st.button("Reset all assumptions", on_click=reset_assumptions)
 
 tab1, tab2, tab3, tab4 = st.tabs(["Polling shifts", "Voters & candidates", "Polling error", "State overrides"])
 with tab1:
@@ -86,11 +90,10 @@ with tab2:
         rep[unit_choice] = rc2.number_input("Margin change (pts)", -30.0, 30.0, float(rep.get(unit_choice, 0.0)), 0.5,
                                             key=f"w_rep_{unit_choice}")
     rep = {k: v for k, v in rep.items() if v}
+    persist("a_replace", rep)
     if rep:
         st.write({k: f"{v:+.1f}" for k, v in rep.items()})
-        if st.button("Clear replacement assumptions"):
-            rep = {}
-    persist("a_replace", rep)
+        st.button("Clear replacement assumptions", on_click=_clear, args=("a_replace", "w_rep_"))
 
     st.markdown("**Turnout by demographic group**")
     demo = load_demographics()
@@ -135,11 +138,10 @@ with tab4:
     u_ov = c1.selectbox("Set an absolute margin for", ["(none)"] + list(units["unit_id"]), key="w_ov_unit")
     if u_ov != "(none)":
         ov[u_ov] = c2.number_input("Margin (D − R)", -60.0, 60.0, float(ov.get(u_ov, 0.0)), 0.5, key=f"w_ov_{u_ov}")
+    persist("a_overrides", ov)
     if ov:
         st.write({k: fmt_margin(v) for k, v in ov.items()})
-        if st.button("Clear overrides"):
-            ov = {}
-    persist("a_overrides", ov)
+        st.button("Clear overrides", on_click=_clear, args=("a_overrides", "w_ov_"))
 
 units, meta, a, applied = scenario(election)
 fixed = fixed_seats(meta)
@@ -186,7 +188,7 @@ if meta.get("threshold"):
                   annotation_text=f"{meta['threshold']} needed", annotation_position="top")
 bar.update_layout(barmode="stack", height=150, margin=dict(t=30, b=10, l=10, r=10), showlegend=False,
                   xaxis=dict(range=[0, total]))
-st.plotly_chart(bar, use_container_width=True)
+st.plotly_chart(bar, width="stretch")
 
 st.subheader("Spread under your polling-error assumptions")
 if st.toggle("Run Monte Carlo", value=True):
@@ -207,7 +209,7 @@ if st.toggle("Run Monte Carlo", value=True):
         h.add_vline(x=meta["threshold"], line_dash="dash", annotation_text="threshold")
     h.update_layout(height=300, margin=dict(t=10), xaxis_title=f"Democratic {unit_word} per simulated draw",
                     yaxis_title="draws")
-    st.plotly_chart(h, use_container_width=True)
+    st.plotly_chart(h, width="stretch")
     st.caption(f"{sim['n_draws']:,} draws of correlated normal errors around the scenario margins. The spread "
                "depends entirely on the SDs chosen in the 'Polling error' tab; real polling errors have fatter "
                "tails and can be systematic in ways this does not capture.")
@@ -221,7 +223,7 @@ if meta.get("threshold"):
     sf.add_hline(y=meta["threshold"], line_dash="dash", line_color="grey")
 sf.update_layout(height=320, margin=dict(t=10), xaxis_title="Extra shift on top of the scenario (pts, D − R)",
                  yaxis_title=unit_word)
-st.plotly_chart(sf, use_container_width=True)
+st.plotly_chart(sf, width="stretch")
 
 st.subheader("Arithmetic by unit")
 show = applied.copy()
@@ -229,8 +231,8 @@ cols = ["unit_id", "label", "weight", "base_margin", "base_source", "c_national"
         "c_undecided", "c_third_party", "c_demographic", "c_replacement", "c_party_turnout", "scenario_margin",
         "scenario_leader"]
 show = show[[c for c in cols if c in show]].sort_values("scenario_margin", key=lambda s: s.abs())
-st.dataframe(show.round(2), hide_index=True, use_container_width=True, height=420)
+st.dataframe(show.round(2), hide_index=True, width="stretch", height=420)
 download_df(show, f"scenario_units_{election.replace(' ', '_')}")
 if office == "senate" and len(meta.get("holdovers", [])):
     with st.expander("Seats not on the 2026 ballot"):
-        st.dataframe(meta["holdovers"], hide_index=True, use_container_width=True)
+        st.dataframe(meta["holdovers"], hide_index=True, width="stretch")

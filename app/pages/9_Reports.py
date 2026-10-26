@@ -53,17 +53,17 @@ if include_outcome:
                          "comparison": cmp, "narrative": ctx["narrative"], "comp": ctx["comp"],
                          "threshold": ctx["status"].get("threshold"), "unit_word": outcomes.UNIT_WORD[office]}
 tables = reports.build_tables(bundle)
-st.dataframe(tables["Summary"], hide_index=True, use_container_width=True)
+st.dataframe(tables["Summary"].assign(value=lambda d: d["value"].map(lambda v: "—" if v is None or v != v else str(v))), hide_index=True, width="stretch")
 
 c = st.columns(3)
 stem = f"uei_{election.split(' (')[0].replace(' ', '_').lower()}_{dt.date.today().isoformat()}"
 with st.spinner("Building PDF…"):
     c[0].download_button("⬇ PDF report", reports.to_pdf(tables, bundle), file_name=f"{stem}.pdf",
-                         mime="application/pdf", use_container_width=True)
+                         mime="application/pdf", width="stretch")
 c[1].download_button("⬇ Excel workbook", reports.to_excel(tables), file_name=f"{stem}.xlsx",
-                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch")
 c[2].download_button("⬇ CSV tables (zip)", reports.to_csv_zip(tables), file_name=f"{stem}_csv.zip",
-                     mime="application/zip", use_container_width=True)
+                     mime="application/zip", width="stretch")
 st.caption("Contents: executive summary, party outcome & control summary, scenario comparison, polling averages and trends (2026 races), conditional scenario "
            "arithmetic per unit, seat/EV totals, sensitivity analysis, Monte Carlo spread, methodology, data "
            "limitations, and sources with retrieval dates.")

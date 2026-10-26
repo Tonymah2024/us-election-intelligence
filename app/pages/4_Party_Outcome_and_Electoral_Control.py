@@ -10,7 +10,7 @@ import streamlit as st
 
 from common import (D_COLOR, I_COLOR, N_COLOR, R_COLOR, core, download_df, fmt_margin, header,
                     load_assumptions_into_session, load_demographics, office_of, outcome_context, outcomes,
-                    page_setup, require_data, sidebar_election)
+                    page_setup, require_data, set_election, sidebar_election)
 
 page_setup("Party outcome & electoral control")
 require_data()
@@ -83,7 +83,7 @@ delta = outcomes.delta_vs_saved(comp, status, saved[-1] if saved else None)
 with st.expander("Changes relative to the previous saved scenario" + (f" ({saved[-1]['name']})" if saved else ""),
                  expanded=bool(saved)):
     if len(delta):
-        st.dataframe(delta.astype(str), hide_index=True, use_container_width=True)
+        st.dataframe(delta.astype(str), hide_index=True, width="stretch")
     else:
         st.caption("No saved scenario for this election yet. Save one below (section 'Saved scenarios').")
 
@@ -147,7 +147,7 @@ if office == "president":
     if pre:
         rows.insert(0, (f"Before: {ctx['pre_label'].replace('the certified ', '').split(' (')[0]} (certified)",
                         {"D": pre["D"], "I": pre.get("I", 0), "Tie": pre.get("Tie", 0), "R": pre["R"]}, False))
-    st.plotly_chart(allocation_bar(rows, 538, 270), use_container_width=True)
+    st.plotly_chart(allocation_bar(rows, 538, 270), width="stretch")
     st.caption("Solid bars = certified results; hatched bars = hypothetical allocation. Pledged electors only "
                "(faithless electors are not modelled).")
     snake = applied.sort_values("scenario_margin", ascending=False).copy()
@@ -163,7 +163,7 @@ if office == "president":
     f.add_vline(x=270, line_dash="dash", annotation_text="270")
     f.update_layout(barmode="stack", height=150, margin=dict(t=25, b=10, l=10, r=10), xaxis=dict(range=[0, 538]),
                     yaxis=dict(visible=False))
-    st.plotly_chart(f, use_container_width=True)
+    st.plotly_chart(f, width="stretch")
     st.caption("States and ME/NE districts ordered from the largest Democratic to the largest Republican margin under "
                "the scenario; each segment's width is its electoral votes. Hover for details.")
     c1, c2 = st.columns(2)
@@ -176,7 +176,7 @@ if office == "president":
                          [["label", "weight", "baseline margin", "scenario margin", "reference_leader",
                            "scenario_leader"]].rename(columns={"weight": "EV", "reference_leader": "baseline",
                                                                "scenario_leader": "scenario"}),
-                         hide_index=True, use_container_width=True)
+                         hide_index=True, width="stretch")
         else:
             st.caption("None — every state and district has the same leader as in the baseline.")
     with c2:
@@ -184,7 +184,7 @@ if office == "president":
         mn = applied[applied["state"].isin(["ME", "NE"])][["label", "weight", "scenario_margin", "scenario_leader"]]
         st.dataframe(mn.assign(scenario_margin=mn["scenario_margin"].map(fmt_margin))
                      .rename(columns={"weight": "EV", "scenario_margin": "margin", "scenario_leader": "leader"}),
-                     hide_index=True, use_container_width=True)
+                     hide_index=True, width="stretch")
     with st.expander("Electoral College ties and contingent elections", expanded=status["code"] in ("tie", "none")):
         st.markdown(
             "- A candidate needs **270 of 538** electoral votes (an absolute majority of electors).\n"
@@ -218,10 +218,10 @@ elif office == "senate":
             ("After 2026, by party (hypothetical)", post_counts, True),
             ("After 2026, by caucus (hypothetical)", {"D": comp["caucus"]["D"], "R": comp["caucus"]["R"],
                                                       "Tie": comp["caucus"]["unaligned"]}, True)]
-    st.plotly_chart(allocation_bar(rows, 100, 51, height=280), use_container_width=True)
+    st.plotly_chart(allocation_bar(rows, 100, 51, height=280), width="stretch")
     g1, g2 = st.columns([1, 1])
     g1.plotly_chart(hemicycle(post_counts, "Senate after 2026 under the selected scenario (hypothetical)"),
-                    use_container_width=True)
+                    width="stretch")
     with g2:
         st.markdown("**Control rule**")
         st.markdown(f"- Majority: **51** of 100 seats.\n- At **50–50** the vice president breaks ties; the VP for the "
@@ -234,7 +234,7 @@ elif office == "senate":
         if len(ind):
             st.markdown("**Races led by an independent under the scenario**")
             st.dataframe(ind.assign(scenario_margin=ind["scenario_margin"].map(lambda m: fmt_margin(m, party="I"))),
-                         hide_index=True, use_container_width=True)
+                         hide_index=True, width="stretch")
         if hold is not None and len(hold):
             hi = hold[hold["party"] == "I"]
             if len(hi):
@@ -256,17 +256,17 @@ elif office == "house":
     rows = [("Now (observed)", {"D": cur.get("D", 0), "I": cur.get("I", 0), "R": cur.get("R", 0),
                                 "vacant": cur.get("vacant", 0) + cur.get("new_seats", 0)}, False),
             ("After 2026 (hypothetical)", post_counts, True)]
-    st.plotly_chart(allocation_bar(rows, 435, 218), use_container_width=True)
+    st.plotly_chart(allocation_bar(rows, 435, 218), width="stretch")
     g1, g2 = st.columns([1, 1])
     g1.plotly_chart(hemicycle(post_counts, "House after 2026 under the selected scenario (hypothetical)"),
-                    use_container_width=True)
+                    width="stretch")
     with g2:
         st.markdown(f"**Competitive districts** (scenario margin within ±{ctx['competitive_margin']:g} pts): "
                     f"**{comp['competitive_units']}**")
         cd = applied[applied["scenario_margin"].abs() < ctx["competitive_margin"]]
         st.dataframe(cd.assign(margin=cd["scenario_margin"].map(fmt_margin))[["label", "margin", "incumbent_party",
                                                                            "base_source"]]
-                     .sort_values("label"), hide_index=True, use_container_width=True, height=240)
+                     .sort_values("label"), hide_index=True, width="stretch", height=240)
         st.caption("District margins = district lean + generic-ballot environment + scenario shifts (uniform swing). "
                    "Candidates and incumbency are not modelled.")
 
@@ -274,7 +274,7 @@ else:
     st.subheader("Governorships")
     st.plotly_chart(allocation_bar([("Now (observed, same states)", {"D": pre.get("D", 0), "R": pre.get("R", 0),
                                                                      "I": pre.get("I", 0)} if pre else {}, False),
-                                    ("After 2026 (hypothetical)", post_counts, True)], 50), use_container_width=True)
+                                    ("After 2026 (hypothetical)", post_counts, True)], 50), width="stretch")
     st.caption("Grey 'vacant / no incumbent' segment = 2026 races without polls, which are not modelled. Governors not "
                "on the 2026 ballot keep their current party.")
 
@@ -293,7 +293,7 @@ with c1:
                                 textposition="outside", showlegend=False))
         nf.add_hline(y=0, line_color="grey")
         nf.update_layout(height=300, margin=dict(t=10), yaxis_title=f"{word} gained (+) / lost (−)")
-        st.plotly_chart(nf, use_container_width=True)
+        st.plotly_chart(nf, width="stretch")
         st.caption(f"Hypothetical scenario minus {ctx['pre_label']}.")
     else:
         st.info("No pre-election composition is loaded for this election.")
@@ -311,7 +311,7 @@ with c2:
         pf.add_vrect(x0=-cm, x1=cm, fillcolor="#edf2f7", opacity=0.6, line_width=0, layer="below")
         pf.update_layout(height=300 + 8 * len(piv), margin=dict(t=10, l=10), xaxis_title="Scenario margin (D − R)",
                          yaxis=dict(autorange="reversed"))
-        st.plotly_chart(pf, use_container_width=True)
+        st.plotly_chart(pf, width="stretch")
         st.caption(f"Shaded band = ±{cm:g} pts. Black outline = flipping that unit alone would change the control "
                    "status. Margin needed to change hands = the bar length.")
 
@@ -329,7 +329,7 @@ if thr:
 sf.add_vline(x=0, line_dash="dot", line_color="grey", annotation_text="selected scenario")
 sf.update_layout(height=320, margin=dict(t=20), xaxis_title="Additional uniform shift on top of the scenario "
                  "(pts, + toward D)", yaxis_title=word, legend=dict(orientation="h", y=-0.25))
-st.plotly_chart(sf, use_container_width=True)
+st.plotly_chart(sf, width="stretch")
 
 # --------------------------------------------------------------------------- 5. scenario comparison
 st.subheader("Scenario comparison (all hypothetical)")
@@ -353,14 +353,14 @@ presets = outcomes.preset_scenarios(a, ss.get("preset_params"))
 with st.spinner("Calculating scenarios…"):
     cmp = outcomes.compare_scenarios(ctx["units"], meta, presets, pre, load_demographics(), ctx["vp_party"],
                                      ctx["competitive_margin"], draws=2000)
-st.dataframe(cmp, hide_index=True, use_container_width=True,
+st.dataframe(cmp, hide_index=True, width="stretch",
              column_config={"Assumption": st.column_config.TextColumn(width="large")})
 cf = allocation_bar([(r["scenario (hypothetical)"], {"D": r["Democratic"], "I": r["Independent / other"],
                                                      "Tie": r["Unresolved (tied)"], "R": r["Republican"],
                                                      "vacant": total - r["Democratic"] - r["Republican"]
                                                      - r["Independent / other"] - r["Unresolved (tied)"]}, True)
                      for _, r in cmp.iterrows()], total, thr, height=90 + 34 * len(cmp))
-st.plotly_chart(cf, use_container_width=True)
+st.plotly_chart(cf, width="stretch")
 st.caption("'D spread' = 5th–95th percentile of Democratic totals across 2,000 simulated polling-error draws under "
            "each row's error assumptions: a range of outcomes implied by those assumptions, not a probability.")
 download_df(cmp, f"scenario_comparison_{election.split(' (')[0].replace(' ', '_')}")
@@ -379,9 +379,9 @@ if office == "president":
                             marker_color=color, marker_pattern=pat(HYPO), opacity=0.75))
     hf.add_hline(y=270, line_dash="dash", annotation_text="270")
     hf.update_layout(barmode="group", height=360, margin=dict(t=20), yaxis_title="electoral votes")
-    st.plotly_chart(hf, use_container_width=True)
+    st.plotly_chart(hf, width="stretch")
     h["D change"], h["R change"] = h["D"].diff(), h["R"].diff()
-    st.dataframe(h, hide_index=True, use_container_width=True)
+    st.dataframe(h, hide_index=True, width="stretch")
     st.caption("Certified rows: pledged electoral votes computed from certified state and ME/NE district results "
                "(MEDSL, Wikipedia district tables); faithless electors are not reflected. The scenario bar is "
                "hypothetical.")
@@ -400,10 +400,10 @@ elif office in ("senate", "house"):
                      annotation_text="majority")
         hf.update_layout(height=380, margin=dict(t=20), xaxis_title="start of Congress", yaxis_title="seats",
                          legend=dict(orientation="h", y=-0.2))
-        st.plotly_chart(hf, use_container_width=True)
+        st.plotly_chart(hf, width="stretch")
         t = h[["congress", "years", "D", "R", "other", "vacant"]].copy()
         t["D change"], t["R change"] = t["D"].diff(), t["R"].diff()
-        st.dataframe(t.iloc[::-1], hide_index=True, use_container_width=True, height=260)
+        st.dataframe(t.iloc[::-1], hide_index=True, width="stretch", height=260)
         st.caption("Observed: seats at the start of each Congress since 1977, from Wikipedia's 'Party divisions of "
                    "United States Congresses' (first value listed where the composition changed during a Congress). "
                    "Changes are between consecutive Congresses. Open diamonds are the hypothetical scenario for the "
@@ -423,27 +423,33 @@ st.subheader("Saved scenarios")
 st.caption("Saved in this browser session. Download a scenario file to keep it, and load it later to restore the "
            "Scenario simulator's assumptions.")
 sc = st.columns([2, 1, 1])
-name = sc[0].text_input("Scenario name", f"{election.split(' (')[0]} — {dt.datetime.now():%H:%M:%S}")
-if sc[1].button("Save current scenario", use_container_width=True):
+if not ss.get("scenario_name"):
+    ss["scenario_name"] = f"{election.split(' (')[0]} — {dt.datetime.now():%H:%M:%S}"
+name = sc[0].text_input("Scenario name", key="scenario_name")
+if sc[1].button("Save current scenario", width="stretch"):
     ss.setdefault("saved_scenarios", []).append({
         "name": name, "election": election, "saved_at": dt.datetime.now().isoformat(timespec="seconds"),
         "assumptions": outcomes.assumptions_to_json(a), "status": status["label"],
         "comp": {kk: comp[kk] for kk in ("D", "R", "I", "Tie", "competitive")}})
-    st.rerun()
+    st.toast(f"Saved “{name}”.")
 all_saved = ss.get("saved_scenarios", [])
 if all_saved:
     sv = pd.DataFrame([{"name": s["name"], "election": s["election"], "saved": s["saved_at"], "D": s["comp"]["D"],
                         "R": s["comp"]["R"], "I/other": s["comp"]["I"], "status": s["status"]} for s in all_saved])
-    st.dataframe(sv, hide_index=True, use_container_width=True)
+    st.dataframe(sv, hide_index=True, width="stretch")
     import json
     sc[2].download_button("Download saved scenarios", json.dumps(all_saved, indent=1).encode(),
-                          file_name="uei_saved_scenarios.json", mime="application/json", use_container_width=True)
-    pick = st.selectbox("Load a saved scenario into the Scenario simulator", ["(choose)"] + [s["name"] for s in all_saved])
-    if pick != "(choose)" and st.button("Load selected scenario"):
-        s = next(s for s in all_saved if s["name"] == pick)
+                          file_name="uei_saved_scenarios.json", mime="application/json", width="stretch")
+    labels = [f"{i + 1}. {s['name']}" for i, s in enumerate(all_saved)]
+    pick = st.selectbox("Load a saved scenario into the Scenario simulator", ["(choose)"] + labels)
+
+    def _load(i: int):
+        s = all_saved[i]
         load_assumptions_into_session(outcomes.assumptions_from_json(s["assumptions"]))
-        ss["election"] = s["election"]
-        st.rerun()
+        set_election(s["election"])
+
+    if pick != "(choose)":
+        st.button("Load selected scenario", on_click=_load, args=(labels.index(pick),))
 up = st.file_uploader("Load a saved-scenarios file", type="json")
 if up is not None and st.button("Add scenarios from file"):
     import json

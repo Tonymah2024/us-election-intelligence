@@ -26,11 +26,17 @@ BADGES = {
     "scenario": ("Conditional scenario", "#6b46c1"),
     "result": ("Certified result", "#1b2a41"),
 }
+BADGE_HELP = {
+    "observation": "Individual polls as published by the pollster. Raw data, not adjusted by this app.",
+    "model": "Averages and ranges this app calculates from polls (e.g. weighted averages, historical error bands).",
+    "scenario": "'What if' outcomes from the assumptions you set in the sidebar. Not a forecast or a probability.",
+    "result": "Official, certified vote counts from past elections (mainly MIT Election Data and Science Lab; see Data sources).",
+}
 CSS = """
 <style>
 .block-container {padding-top: 1.4rem; max-width: 1400px;}
-.uei-badge {display:inline-block; padding:2px 9px; border-radius:10px; color:#fff; font-size:0.78rem;
-            font-weight:600; margin-right:6px;}
+.uei-badge {display:inline-block; padding:1px 8px; border-radius:4px; color:#fff; font-size:0.74rem;
+            font-weight:600; margin-right:6px; cursor:help; user-select:none;}
 .uei-note {color:#4a5568; font-size:0.86rem;}
 div[data-testid="stMetricValue"] {font-size: 1.55rem;}
 </style>
@@ -44,12 +50,17 @@ def page_setup(title: str, icon: str = "🗳️"):
 
 def badge(kind: str) -> str:
     label, color = BADGES[kind]
-    return f'<span class="uei-badge" style="background:{color}">{label}</span>'
+    return f'<span class="uei-badge" style="background:{color}" title="{BADGE_HELP[kind]}">{label}</span>'
 
 
 def header(title: str, kinds: list[str], note: str | None = None):
     st.title(title)
-    st.markdown(" ".join(badge(k) for k in kinds), unsafe_allow_html=True)
+    left, right = st.columns([5, 1.3], vertical_alignment="center")
+    left.markdown("<span class='uei-note'>Data on this page:</span> " + " ".join(badge(k) for k in kinds),
+                  unsafe_allow_html=True)
+    with right.popover("What do these labels mean?", width="stretch"):
+        for k, (label, color) in BADGES.items():
+            st.markdown(f"{badge(k)} {BADGE_HELP[k]}", unsafe_allow_html=True)
     if note:
         st.markdown(f'<div class="uei-note">{note}</div>', unsafe_allow_html=True)
 
@@ -138,8 +149,10 @@ def office_of(election: str) -> str:
 
 def sidebar_election(default: str = "Senate 2026") -> str:
     st.sidebar.markdown("### Election")
-    idx = ELECTIONS.index(st.session_state.get("election", default))
-    election = st.sidebar.selectbox("Election type and year", ELECTIONS, index=idx, key="election_select")
+    ss = st.session_state
+    if ss.get("election_select") not in ELECTIONS:
+        ss["election_select"] = ss.get("election", default)
+    election = st.sidebar.selectbox("Election type and year", ELECTIONS, key="election_select")
     st.session_state["election"] = election
     if election.startswith("President"):
         opts = {"results": "Certified results", "polls": "Final polling averages (538 archive)"}
@@ -190,13 +203,34 @@ def get_assumptions(office: str) -> Assumptions:
     )
 
 
+def clear_widget_state():
+    """Forget the Scenario simulator's input widgets so they redraw from the stored assumptions (a_* keys)."""
+    ss = st.session_state
+    for k in [k for k in ss.keys() if str(k).startswith("w_")]:
+        del ss[k]
+
+
+def reset_assumptions():
+    """Callback: drop every assumption and the widgets showing them."""
+    ss = st.session_state
+    for k in [k for k in ss.keys() if str(k).startswith("a_")]:
+        del ss[k]
+    clear_widget_state()
+
+
+def set_election(election: str):
+    """Switch the selected election (call from a callback, before the sidebar is drawn)."""
+    st.session_state["election"] = election
+    st.session_state["election_select"] = election
+
+
 def load_assumptions_into_session(a: Assumptions):
     """Make a saved scenario the Scenario simulator's current assumptions."""
     ss = st.session_state
+    clear_widget_state()
     ss["a_nat"] = a.national_shift
     for r in REGIONS:
         ss[f"a_reg_{r}"] = float(a.regional_shifts.get(r, 0.0))
-        ss[f"w_reg_{r}"] = float(a.regional_shifts.get(r, 0.0))
     ss["a_state_shifts"], ss["a_overrides"], ss["a_replace"] = dict(a.state_shifts), dict(a.state_overrides), dict(a.replacement_shifts)
     ss["a_und"], ss["a_tp"], ss["a_tp_from_d"] = a.undecided_dem_share, a.third_party_pts, a.third_party_from_dem
     ss["a_turnout"], ss["a_group_margins"] = dict(a.turnout_changes), dict(a.group_margins)

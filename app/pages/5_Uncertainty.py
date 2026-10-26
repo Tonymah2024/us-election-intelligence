@@ -58,12 +58,12 @@ if len(polls):
                                  name="± 1.645 × historical error SD"))
     fig.add_vline(x=0, line_dash="dot")
     fig.update_layout(height=max(400, 22 * len(av)), margin=dict(t=10), xaxis_title="Margin (D − R)")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
     st.caption("Dark bars: uncertainty of the polling average itself. Grey bars: the much wider range implied by "
                "historical differences between final averages and results.")
     st.dataframe(av[["race_id", "matchup", "n_polls", "mean", "lo90", "hi90", "std", "dispersion_sd", "n_eff"]]
                  .rename(columns={"std": "poll SD (all polls)", "dispersion_sd": "weighted SD in window"}).round(2),
-                 hide_index=True, use_container_width=True)
+                 hide_index=True, width="stretch")
 else:
     st.info("Current-poll dispersion is shown for 2026 Senate and governor races.")
 
@@ -74,10 +74,10 @@ if len(summ):
                labels={"bias_mean_error": "Mean error (result − polls, pts)"})
     f.add_hline(y=0, line_color="grey")
     f.update_layout(height=360, margin=dict(t=10))
-    st.plotly_chart(f, use_container_width=True)
+    st.plotly_chart(f, width="stretch")
     st.caption("Positive = Democrats did better than the final polls; negative = Republicans did better. "
                "Bias varies in sign and size between cycles, which is why it cannot simply be subtracted.")
-    st.dataframe(sel.round(2), hide_index=True, use_container_width=True)
+    st.dataframe(sel.round(2), hide_index=True, width="stretch")
 
 st.subheader("4 · Sensitivity of the current scenario")
 units, meta, a, applied = scenario(election)
@@ -97,8 +97,8 @@ if units is not None and len(units):
             rows.append({"variation": lab, "D": t["D"] + fixed["D"], "R": t["R"] + fixed["R"]})
     base = core.totals(applied)
     rows.insert(0, {"variation": "Current scenario", "D": base["D"] + fixed["D"], "R": base["R"] + fixed["R"]})
-    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch")
     close = applied.loc[applied["scenario_margin"].abs() < 3, ["unit_id", "label", "weight", "scenario_margin"]]
     st.markdown(f"**{len(close)} units** are within 3 pts under the current scenario "
                 f"({close['weight'].sum():.0f} weight); these drive most of the sensitivity.")
-    st.dataframe(close.sort_values("scenario_margin").round(2), hide_index=True, use_container_width=True)
+    st.dataframe(close.sort_values("scenario_margin").round(2), hide_index=True, width="stretch")

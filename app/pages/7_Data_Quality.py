@@ -14,14 +14,14 @@ header("Data quality and provenance", ["observation", "result"],
 
 src, last = sources_table()
 st.subheader("Sources, terms of use and retrieval")
-st.dataframe(src, hide_index=True, use_container_width=True,
+st.dataframe(src, hide_index=True, width="stretch",
              column_config={"url": st.column_config.LinkColumn("url")})
 st.markdown("**Not used:** RealClearPolling (automated access blocked; terms restrict scraping) and live "
             "FiveThirtyEight feeds (discontinued March 2025). No poll or result is ever filled in when a source "
             "is missing; the affected race is labelled instead.")
 
 st.subheader("Latest update run")
-st.dataframe(last, hide_index=True, use_container_width=True)
+st.dataframe(last, hide_index=True, width="stretch")
 
 polls = load_polls(cycle=2026, source="wikipedia")
 st.subheader("2026 polls: completeness")
@@ -34,7 +34,7 @@ if len(polls):
     f = px.bar(miss, x="missing_share", y="field", orientation="h", range_x=(0, 1),
                labels={"missing_share": "Share of polls missing the field"})
     f.update_layout(height=320, margin=dict(t=10))
-    st.plotly_chart(f, use_container_width=True)
+    st.plotly_chart(f, width="stretch")
     st.caption("Wikipedia tables rarely include survey mode or exact publication date; these are recorded as "
                "missing rather than guessed. Follow the pollster link to verify methodology.")
     c = st.columns(4)
@@ -49,7 +49,7 @@ if len(polls):
                                       partisan=("sponsor_partisan", lambda s: ",".join(sorted(set(s.dropna())))),
                                       first=("end_date", "min"), last=("end_date", "max")).reset_index() \
         .sort_values("polls", ascending=False)
-    st.dataframe(pp, hide_index=True, use_container_width=True, height=360)
+    st.dataframe(pp, hide_index=True, width="stretch", height=360)
     download_df(pp, "pollster_profile_2026")
 
     st.subheader("Poll explorer")
@@ -65,7 +65,7 @@ if len(polls):
     cols = ["race_id", "matchup", "pollster", "sponsor_partisan", "start_date", "end_date", "sample_size",
             "population", "moe", "pct_dem", "pct_rep", "pct_undecided", "margin", "is_variant",
             "pollster_url", "source_url", "source_revision", "retrieved_at"]
-    st.dataframe(x[cols].sort_values("end_date", ascending=False), hide_index=True, use_container_width=True,
+    st.dataframe(x[cols].sort_values("end_date", ascending=False), hide_index=True, width="stretch",
                  height=420, column_config={"pollster_url": st.column_config.LinkColumn(),
                                             "source_url": st.column_config.LinkColumn()})
     download_df(x[cols], "polls_2026_filtered")
@@ -73,9 +73,9 @@ if len(polls):
 st.subheader("Historical archive coverage")
 h = db.read_sql("SELECT cycle, office, COUNT(*) polls, COUNT(DISTINCT race_id) races FROM polls "
                 "WHERE source='fte_raw_polls' GROUP BY cycle, office ORDER BY cycle")
-st.dataframe(h.pivot(index="cycle", columns="office", values="polls").fillna(0).astype(int), use_container_width=True)
+st.dataframe(h.pivot(index="cycle", columns="office", values="polls").fillna(0).astype(int), width="stretch")
 r = db.read_sql("SELECT office, MIN(year) first, MAX(year) last, COUNT(*) rows, source FROM results GROUP BY office, source")
-st.dataframe(r, hide_index=True, use_container_width=True)
+st.dataframe(r, hide_index=True, width="stretch")
 st.caption("Known source gaps: the MEDSL Senate file has no 2022 Connecticut race (seat composition therefore uses "
            "Wikipedia's current-senators list); the MEDSL House file requires a guestbook form (see README).")
 
