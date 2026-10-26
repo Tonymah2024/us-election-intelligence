@@ -58,7 +58,7 @@ def header(title: str, kinds: list[str], note: str | None = None):
     left, right = st.columns([5, 1.3], vertical_alignment="center")
     left.markdown("<span class='uei-note'>Data on this page:</span> " + " ".join(badge(k) for k in kinds),
                   unsafe_allow_html=True)
-    with right.popover("What do these labels mean?", width="stretch"):
+    with right.popover("ℹ️ About these labels", width="stretch"):
         for k, (label, color) in BADGES.items():
             st.markdown(f"{badge(k)} {BADGE_HELP[k]}", unsafe_allow_html=True)
     if note:
