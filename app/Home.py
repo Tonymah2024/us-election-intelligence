@@ -18,6 +18,43 @@ header("US Election Intelligence — Overview", ["observation", "result"],
        "Nonpartisan research tool. Poll observations and certified results are shown separately from modelled "
        "estimates and conditional scenarios. Nothing in this app forecasts a winner or assigns win probabilities.")
 
+with st.expander("📖 How to read this app", expanded=False):
+    st.markdown("""
+**Start here**
+
+1. **Pick an election in the sidebar** (Senate, Governor or House 2026, or a presidential year). All pages
+   except this Overview follow that choice.
+2. **Check the coloured labels under each page title**: they say what kind of number you're looking at.
+   Hover one, or click *ℹ️ About these labels*.
+   - **Observation**: individual polls as published by the pollster.
+   - **Model**: averages and ranges this app calculates from those polls.
+   - **Scenario**: "what if" results from the assumptions you set. Not a prediction.
+   - **Result**: official, certified counts from past elections.
+3. **Margins are written as a lead**: *D+3.2* = the Democrat leads by 3.2 points; *R+1.5* = the Republican
+   leads by 1.5. A gap of about 3 points or less is usually within normal polling error.
+
+**The pages**
+
+| Page | What to look at |
+|---|---|
+| **Overview** (this page) | Each race's polling average with a 90% range. If the range crosses zero, either side could be ahead. The 14-day change says whether a recent move is bigger than normal noise. |
+| **Polling Trends** | Each dot is one poll (bigger = larger sample; shape = likely voters, registered voters or all adults). The line is the average: trust the trend more than any single poll. |
+| **Electoral Map** | States coloured by margin (darker = bigger lead, grey = no polls). The tipping point is the state that would decide the overall result. |
+| **Scenario Simulator** | Move the sliders (e.g. "Republicans +2 nationally", a turnout change) and see how totals change. It answers "if this happened, then what?", not "what will happen". |
+| **Party Outcome & Electoral Control** | Who would control the Senate or House, or reach 270 electoral votes, under your scenario; closest races; saved scenarios to compare. |
+| **Uncertainty** | How far polls have missed in the past, to judge whether a lead is safe. |
+| **Historical Comparison** | Final polls vs actual results in past elections. |
+| **Data Quality** | Where the data comes from, with links to each poll's source. |
+| **What Changed** | Compares two days of data: new polls and whether averages moved more than chance. |
+| **Reports** | Download the current scenario as PDF, Excel or CSV. |
+
+**A quick routine:** Overview for the big picture → *What Changed* for what moved since yesterday →
+*Polling Trends* for any close race → *Scenario Simulator* to test "what if polls are off by 3 points?" →
+*Party Outcome* to see whether that would flip control.
+
+Data refreshes automatically once a day. The app never predicts a winner or gives win probabilities.
+""")
+
 polls = load_polls(cycle=2026, source="wikipedia")
 runs = db.read_sql("SELECT * FROM update_runs ORDER BY run_id DESC LIMIT 1")
 today = dt.date.today()
